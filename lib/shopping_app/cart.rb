@@ -1,5 +1,6 @@
 require_relative "item_manager"
-
+require_relative "ownable"
+include Ownable
 class Cart
   include ItemManager
 
@@ -9,8 +10,6 @@ class Cart
   end
 
   def items
-    # Cartにとってのitemsは自身の@itemsとしたいため、ItemManagerのitemsメソッドをオーバーライドします。
-    # CartインスタンスがItemインスタンスを持つときは、オーナー権限の移譲をさせることなく、自身の@itemsに格納(Cart#add)するだけだからです。
     @items
   end
 
@@ -24,16 +23,26 @@ class Cart
 
   def check_out
     return if owner.wallet.balance < total_amount
-  # ## 要件
-  #   - カートの中身（Cart#items）のすべてのアイテムの購入金額が、カートのオーナーのウォレットからアイテムのオーナーのウォレットに移されること。
-  #   - カートの中身（Cart#items）のすべてのアイテムのオーナー権限が、カートのオーナーに移されること。
-  #   - カートの中身（Cart#items）が空になること。
 
-  # ## ヒント
-  #   - カートのオーナーのウォレット ==> self.owner.wallet
-  #   - アイテムのオーナーのウォレット ==> item.owner.wallet
-  #   - お金が移されるということ ==> (？)のウォレットからその分を引き出して、(？)のウォレットにその分を入金するということ
-  #   - アイテムのオーナー権限がカートのオーナーに移されること ==> オーナーの書き換え(item.owner = ?)
+    # Transférer le montant d'achat du portefeuille du propriétaire du panier au portefeuille du propriétaire de l'article
+    @items.each do |item|
+      item_owner_wallet = item.owner.wallet
+      owner_wallet = owner.wallet
+
+      # Vérifier si le portefeuille du propriétaire du panier a suffisamment de fonds
+      if owner_wallet.balance >= item.price
+        # Retirer le montant du portefeuille du propriétaire du panier
+        owner_wallet.withdraw(item.price)
+
+        # Déposer le montant dans le portefeuille du propriétaire de l'article
+        item_owner_wallet.deposit(item.price)
+
+        # Transférer les droits de propriété de l'article au propriétaire du panier
+        item.owner = owner
+      end
+    end
+
+    # Vider le panier
+    @items = []
   end
-
 end

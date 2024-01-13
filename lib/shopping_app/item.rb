@@ -1,3 +1,5 @@
+require_relative "ownable"
+include Ownable
 class Item
   attr_reader :name, :price
 
